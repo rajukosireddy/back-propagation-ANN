@@ -1,0 +1,55 @@
+import numpy as np
+from sklearn.datasets import fetch_openml
+from sklearn.model_selection import train_test_split
+
+mnist = fetch_openml('mnist_784')
+X, y = mnist.data, mnist.target.astype(int)
+
+X = X / 255.0
+y = np.eye(10)[y]  
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+input_size = 784  
+hidden_size = 128
+output_size = 10
+learning_rate = 0.1
+epochs = 10
+
+np.random.seed(0)
+weights_input_hidden = np.random.randn(input_size, hidden_size)
+biases_hidden = np.zeros((1, hidden_size))
+weights_hidden_output = np.random.randn(hidden_size, output_size)
+biases_output = np.zeros((1, output_size))
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+def sigmoid_derivative(x):
+    return x * (1 - x)
+
+for epoch in range(epochs):
+    hidden_layer_input = np.dot(X_train, weights_input_hidden) + biases_hidden
+    hidden_layer_output = sigmoid(hidden_layer_input)
+
+    output_layer_input = np.dot(hidden_layer_output, weights_hidden_output) + biases_output
+    predicted_output = sigmoid(output_layer_input)
+
+    loss = y_train - predicted_output
+
+    output_error = loss * sigmoid_derivative(predicted_output)
+    hidden_layer_error = output_error.dot(weights_hidden_output.T) * sigmoid_derivative(hidden_layer_output)
+
+    weights_hidden_output += hidden_layer_output.T.dot(output_error) * learning_rate
+    biases_output += np.sum(output_error, axis=0, keepdims=True) * learning_rate
+    weights_input_hidden += X_train.T.dot(hidden_layer_error) * learning_rate
+    biases_hidden += np.sum(hidden_layer_error, axis=0, keepdims=True) * learning_rate
+
+hidden_layer_input = np.dot(X_test, weights_input_hidden) + biases_hidden
+hidden_layer_output = sigmoid(hidden_layer_input)
+output_layer_input = np.dot(hidden_layer_output, weights_hidden_output) + biases_output
+predicted_output = sigmoid(output_layer_input)
+
+correct_predictions = np.sum(np.argmax(predicted_output, axis=1) == np.argmax(y_test, axis=1))
+accuracy = correct_predictions / y_test.shape[0] * 100
+print(f'Test accuracy: {accuracy:.2f}%')
